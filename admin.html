@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1e1e1e; color: white; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #444; padding: 12px; text-align: left; }
+    th { background: #333; color: #00e676; }
+    tr:nth-child(even) { background: #2a2a2a; }
+  </style>
+</head>
+<body>
+  <h1>📊 ตารางคะแนน Real-time</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ชื่อผู้เล่น</th>
+        <th>คะแนน</th>
+      </tr>
+    </thead>
+    <tbody id="user-table"></tbody>
+  </table>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      databaseURL: "https://testing-db-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    onValue(ref(db, 'users'), (snapshot) => {
+      const data = snapshot.val();
+      const tableBody = document.getElementById('user-table');
+      tableBody.innerHTML = '';
+
+      if (data) {
+        const sortedUsers = Object.values(data).sort((a, b) => b.score - a.score);
+        sortedUsers.forEach(user => {
+          const row = `<tr>
+            <td>${user.name}</td>
+            <td><b>${user.score}</b></td>
+          </tr>`;
+          tableBody.innerHTML += row;
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+
+

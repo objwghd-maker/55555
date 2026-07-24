@@ -3,31 +3,163 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard</title>
+  <title>Admin Dashboard - Real-time Leaderboard</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #1e1e1e; color: white; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #444; padding: 12px; text-align: left; }
-    th { background: #333; color: #00e676; }
-    tr:nth-child(even) { background: #2a2a2a; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #333;
+    }
+
+    h1 {
+      font-size: 24px;
+      color: #00e676;
+    }
+
+    .status {
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: #333;
+    }
+
+    .status.online {
+      color: #00e676;
+      border: 1px solid #00e676;
+    }
+
+    .stats-card {
+      background: #1e1e1e;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 20px;
+    }
+
+    .stat-item {
+      font-size: 16px;
+    }
+
+    .stat-item span {
+      font-weight: bold;
+      color: #00e676;
+    }
+
+    .table-container {
+      background: #1e1e1e;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 14px 18px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #252525;
+      color: #00e676;
+      font-weight: 600;
+      border-bottom: 2px solid #333;
+    }
+
+    tr {
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    tr:nth-child(even) {
+      background-color: #1a1a1a;
+    }
+
+    tr:hover {
+      background-color: #2c2c2c;
+    }
+
+    .rank {
+      font-weight: bold;
+      width: 60px;
+      text-align: center;
+    }
+
+    .rank-1 { color: #ffd700; }
+    .rank-2 { color: #c0c0c0; }
+    .rank-3 { color: #cd7f32; }
+
+    .score {
+      font-weight: bold;
+      color: #ffffff;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 30px;
+      color: #888;
+    }
   </style>
 </head>
 <body>
-  <h1>📊 ตารางคะแนน Real-time</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>ชื่อผู้เล่น</th>
-        <th>คะแนน</th>
-      </tr>
-    </thead>
-    <tbody id="user-table"></tbody>
-  </table>
+
+  <div class="container">
+    <div class="header">
+      <h1>📊 ตารางคะแนน Real-time (Admin)</h1>
+      <div id="status" class="status">กำลังเชื่อมต่อ...</div>
+    </div>
+
+    <div class="stats-card">
+      <div class="stat-item">จำนวนผู้เล่นทั้งหมด: <span id="total-users">0</span> คน</div>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="rank">อันดับ</th>
+            <th>ชื่อผู้เล่น</th>
+            <th>คะแนน</th>
+          </tr>
+        </thead>
+        <tbody id="user-table">
+          <tr>
+            <td colspan="3" class="no-data">กำลังโหลดข้อมูล...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+    // ตั้งค่า Firebase Database URL
     const firebaseConfig = {
       databaseURL: "https://testing-db-default-rtdb.asia-southeast1.firebasedatabase.app/"
     };
@@ -35,24 +167,65 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // ฟังก์ชันสำหรับแปลงข้อความเพื่อป้องกัน XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text ?? '';
+      return div.innerHTML;
+    }
+
+    const tableBody = document.getElementById('user-table');
+    const totalUsersEl = document.getElementById('total-users');
+    const statusEl = document.getElementById('status');
+
+    // ดึงข้อมูล Realtime จาก Node 'users'
     onValue(ref(db, 'users'), (snapshot) => {
+      statusEl.innerText = "🟢 ออนไลน์";
+      statusEl.className = "status online";
+
       const data = snapshot.val();
-      const tableBody = document.getElementById('user-table');
       tableBody.innerHTML = '';
 
       if (data) {
-        const sortedUsers = Object.values(data).sort((a, b) => b.score - a.score);
-        sortedUsers.forEach(user => {
-          const row = `<tr>
-            <td>${user.name}</td>
-            <td><b>${user.score}</b></td>
-          </tr>`;
-          tableBody.innerHTML += row;
+        // แปลงข้อมูลเป็น Array
+        const userList = Object.keys(data).map(key => ({
+          id: key,
+          name: data[key].name || 'ไม่ระบุชื่อ',
+          score: Number(data[key].score) || 0
+        }));
+
+        // เรียงลำดับคะแนนจากมากไปน้อย
+        userList.sort((a, b) => b.score - a.score);
+
+        totalUsersEl.innerText = userList.length;
+
+        // แสดงผลในตาราง
+        userList.forEach((user, index) => {
+          const rank = index + 1;
+          let rankClass = '';
+          if (rank === 1) rankClass = 'rank-1';
+          else if (rank === 2) rankClass = 'rank-2';
+          else if (rank === 3) rankClass = 'rank-3';
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td class="rank ${rankClass}">${rank}</td>
+            <td>${escapeHtml(user.name)}</td>
+            <td class="score">${user.score.toLocaleString()}</td>
+          `;
+          tableBody.appendChild(row);
         });
+      } else {
+        totalUsersEl.innerText = '0';
+        tableBody.innerHTML = '<tr><td colspan="3" class="no-data">ยังไม่มีข้อมูลผู้เล่นในระบบ</td></tr>';
       }
+    }, (error) => {
+      console.error("Error fetching data:", error);
+      statusEl.innerText = "🔴 การเชื่อมต่อผิดพลาด";
+      statusEl.className = "status";
+      tableBody.innerHTML = '<tr><td colspan="3" class="no-data">ไม่สามารถโหลดข้อมูลได้ ตรวจสอบสิทธิ์ Firebase Rules</td></tr>';
     });
   </script>
 </body>
 </html>
-
 

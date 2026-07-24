@@ -5,28 +5,89 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Player Clicker Game</title>
   <style>
-    body { font-family: sans-serif; background: #1e1b4b; color: white; text-align: center; padding: 30px 20px; }
-    .card { background: #312e81; padding: 30px; border-radius: 16px; max-width: 360px; margin: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    h1 { color: #818cf8; font-size: 24px; margin-bottom: 15px; }
-    input { width: 90%; padding: 12px; border-radius: 8px; border: none; text-align: center; font-size: 16px; margin-bottom: 20px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: #1e1b4b; 
+      color: white; 
+      text-align: center; 
+      padding: 30px 20px; 
+    }
+    .card { 
+      background: #312e81; 
+      padding: 30px; 
+      border-radius: 16px; 
+      max-width: 360px; 
+      margin: auto; 
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+      border: 1px solid #4338ca;
+    }
+    h1 { color: #818cf8; font-size: 22px; margin-bottom: 15px; }
+    input { 
+      width: 100%; 
+      padding: 12px; 
+      border-radius: 8px; 
+      border: 2px solid #4338ca; 
+      background: #1e1b4b;
+      color: #fff;
+      text-align: center; 
+      font-size: 16px; 
+      margin-bottom: 20px; 
+      outline: none;
+    }
+    input:focus { border-color: #818cf8; }
     .score-title { font-size: 14px; color: #c7d2fe; }
-    .score-num { font-size: 48px; color: #fbbf24; font-weight: bold; margin: 10px 0; }
-    .btn-click { width: 100%; padding: 20px; font-size: 22px; font-weight: bold; background: #f59e0b; color: white; border: none; border-radius: 12px; cursor: pointer; }
-    .btn-click:active { transform: scale(0.95); }
-    .btn-send { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-    #status { margin-top: 15px; font-size: 14px; }
+    .score-num { font-size: 50px; color: #fbbf24; font-weight: bold; margin: 10px 0; }
+    
+    .btn-click { 
+      width: 100%; 
+      padding: 18px; 
+      font-size: 22px; 
+      font-weight: bold; 
+      background: #f59e0b; 
+      color: white; 
+      border: none; 
+      border-radius: 12px; 
+      cursor: pointer; 
+      box-shadow: 0 4px 0 #d97706;
+      transition: all 0.1s;
+    }
+    .btn-click:active { 
+      transform: translateY(4px); 
+      box-shadow: 0 0 0 #d97706;
+    }
+
+    .btn-send { 
+      width: 100%; 
+      padding: 14px; 
+      background: #10b981; 
+      color: white; 
+      border: none; 
+      border-radius: 8px; 
+      font-size: 16px;
+      font-weight: bold; 
+      cursor: pointer; 
+      margin-top: 20px; 
+      transition: background 0.2s;
+    }
+    .btn-send:hover { background: #059669; }
+    .btn-send:disabled { background: #6b7280; cursor: not-allowed; }
+
+    #status { margin-top: 15px; font-size: 14px; min-height: 20px; }
   </style>
 </head>
 <body>
+
   <div class="card">
-    <h1>🎮 หน้าสำหรับ "ผู้เล่น"</h1>
+    <h1>🎮 หน้าผู้เล่น (Clicker Game)</h1>
+    
     <input type="text" id="username" placeholder="กรอกชื่อผู้เล่นตรงนี้">
     
     <div class="score-title">คะแนนปัจจุบัน</div>
     <div class="score-num" id="score-display">0</div>
     
     <button class="btn-click" id="click-btn">CLICK! 👆</button>
-    <button class="btn-send" id="send-btn">🚀 ส่งคะแนนเข้า Admin</button>
+    <button class="btn-send" id="send-btn">🚀 ส่งคะแนนไปหา Admin</button>
     
     <div id="status"></div>
   </div>
@@ -35,29 +96,56 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    const app = initializeApp({ databaseURL: "https://testing-db-default-rtdb.asia-southeast1.firebasedatabase.app/" });
+    // ตั้งค่า Firebase Database URL เดียวกันกับฝั่ง Admin
+    const firebaseConfig = {
+      databaseURL: "https://testing-db-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+
+    const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let score = 0;
+    let currentScore = 0;
     const scoreDisplay = document.getElementById('score-display');
     const statusDiv = document.getElementById('status');
+    const sendBtn = document.getElementById('send-btn');
+    const clickBtn = document.getElementById('click-btn');
+    const nameInput = document.getElementById('username');
 
-    document.getElementById('click-btn').addEventListener('click', () => {
-      score++;
-      scoreDisplay.innerText = score;
+    // กดปุ่มคลิกเพิ่มคะแนน
+    clickBtn.addEventListener('click', () => {
+      currentScore++;
+      scoreDisplay.innerText = currentScore;
     });
 
-    document.getElementById('send-btn').addEventListener('click', () => {
-      const name = document.getElementById('username').value.trim();
+    // กดปุ่มส่งคะแนน
+    sendBtn.addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+
       if (!name) {
-        alert('กรุณากรอกชื่อผู้เล่นด้วยครับ');
+        alert('❌ กรุณากรอกชื่อผู้เล่นก่อนส่งคะแนนครับ!');
+        nameInput.focus();
         return;
       }
 
-      set(ref(db, 'users/' + name), { name: name, score: score });
-      statusDiv.innerHTML = "<b style='color:#34d399;'>✅ ส่งคะแนนเรียบร้อยแล้ว!</b>";
+      sendBtn.disabled = true;
+      statusDiv.innerHTML = "<b style='color:#fbbf24;'>⏳ กำลังส่งคะแนน...</b>";
+
+      try {
+        await set(ref(db, 'users/' + name), {
+          name: name,
+          score: Number(currentScore)
+        });
+
+        statusDiv.innerHTML = "<b style='color:#34d399;'>✅ ส่งคะแนนให้ Admin เรียบร้อย!</b>";
+      } catch (error) {
+        console.error("Error sending score:", error);
+        statusDiv.innerHTML = "<b style='color:#f87171;'>❌ ส่งไม่สำเร็จ! (ตรวจสอบ Firebase Rules)</b>";
+      } finally {
+        sendBtn.disabled = false;
+      }
     });
   </script>
+
 </body>
 </html>
 

@@ -3,178 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Player Score Sender</title>
+  <title>Player Clicker Game</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    body {
-      background-color: #121212;
-      color: #ffffff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    .card {
-      background: #1e1e1e;
-      padding: 30px;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-      border: 1px solid #333;
-    }
-
-    h2 {
-      color: #00e676;
-      margin-bottom: 20px;
-      text-align: center;
-      font-size: 20px;
-    }
-
-    .form-group {
-      margin-bottom: 18px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 14px;
-      color: #ccc;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid #444;
-      background: #2a2a2a;
-      color: #fff;
-      font-size: 16px;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: #00e676;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 6px;
-      background-color: #00e676;
-      color: #121212;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
-
-    button:hover {
-      background-color: #00c853;
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    button:disabled {
-      background-color: #555;
-      color: #888;
-      cursor: not-allowed;
-    }
-
-    #msg {
-      margin-top: 15px;
-      text-align: center;
-      font-size: 14px;
-      min-height: 20px;
-    }
-
-    .success { color: #00e676; }
-    .error { color: #ff5252; }
-    .info { color: #ffb74d; }
+    body { font-family: sans-serif; background: #1e1b4b; color: white; text-align: center; padding: 30px 20px; }
+    .card { background: #312e81; padding: 30px; border-radius: 16px; max-width: 360px; margin: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    h1 { color: #818cf8; font-size: 24px; margin-bottom: 15px; }
+    input { width: 90%; padding: 12px; border-radius: 8px; border: none; text-align: center; font-size: 16px; margin-bottom: 20px; }
+    .score-title { font-size: 14px; color: #c7d2fe; }
+    .score-num { font-size: 48px; color: #fbbf24; font-weight: bold; margin: 10px 0; }
+    .btn-click { width: 100%; padding: 20px; font-size: 22px; font-weight: bold; background: #f59e0b; color: white; border: none; border-radius: 12px; cursor: pointer; }
+    .btn-click:active { transform: scale(0.95); }
+    .btn-send { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    #status { margin-top: 15px; font-size: 14px; }
   </style>
 </head>
 <body>
-
   <div class="card">
-    <h2>🎮 ส่งคะแนนให้ Admin</h2>
+    <h1>🎮 หน้าสำหรับ "ผู้เล่น"</h1>
+    <input type="text" id="username" placeholder="กรอกชื่อผู้เล่นตรงนี้">
     
-    <div class="form-group">
-      <label for="playerName">ชื่อผู้เล่น</label>
-      <input type="text" id="playerName" placeholder="กรอกชื่อผู้เล่น..." required>
-    </div>
-
-    <div class="form-group">
-      <label for="playerScore">คะแนน</label>
-      <input type="number" id="playerScore" placeholder="กรอกคะแนน..." required>
-    </div>
-
-    <button id="btnSend">🚀 กดส่งคะแนนไปหา Admin</button>
-
-    <div id="msg"></div>
+    <div class="score-title">คะแนนปัจจุบัน</div>
+    <div class="score-num" id="score-display">0</div>
+    
+    <button class="btn-click" id="click-btn">CLICK! 👆</button>
+    <button class="btn-send" id="send-btn">🚀 ส่งคะแนนเข้า Admin</button>
+    
+    <div id="status"></div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // ใช้ URL เดียวกับฝั่ง Admin
-    const firebaseConfig = {
-      databaseURL: "https://testing-db-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    };
-
-    const app = initializeApp(firebaseConfig);
+    const app = initializeApp({ databaseURL: "https://testing-db-default-rtdb.asia-southeast1.firebasedatabase.app/" });
     const db = getDatabase(app);
 
-    const btnSend = document.getElementById('btnSend');
-    const nameInput = document.getElementById('playerName');
-    const scoreInput = document.getElementById('playerScore');
-    const msgEl = document.getElementById('msg');
+    let score = 0;
+    const scoreDisplay = document.getElementById('score-display');
+    const statusDiv = document.getElementById('status');
 
-    btnSend.addEventListener('click', async () => {
-      const name = nameInput.value.trim();
-      const score = scoreInput.value.trim();
+    document.getElementById('click-btn').addEventListener('click', () => {
+      score++;
+      scoreDisplay.innerText = score;
+    });
 
-      if (!name || score === '') {
-        msgEl.className = 'error';
-        msgEl.innerText = '❌ กรุณากรอกชื่อและคะแนนให้ครบถ้วน';
+    document.getElementById('send-btn').addEventListener('click', () => {
+      const name = document.getElementById('username').value.trim();
+      if (!name) {
+        alert('กรุณากรอกชื่อผู้เล่นด้วยครับ');
         return;
       }
 
-      btnSend.disabled = true;
-      msgEl.className = 'info';
-      msgEl.innerText = '⏳ กำลังส่งข้อมูลไปยัง Admin...';
-
-      try {
-        // ส่งเข้า node 'users' เพื่อให้ตรงกับฝั่ง Admin
-        const usersRef = ref(db, 'users');
-        await push(usersRef, {
-          name: name,
-          score: Number(score),
-          timestamp: Date.now()
-        });
-
-        msgEl.className = 'success';
-        msgEl.innerText = '✅ ส่งคะแนนเรียบร้อยแล้ว!';
-        scoreInput.value = ''; // ล้างช่องใส่คะแนนหลังส่งเสร็จ
-
-      } catch (error) {
-        console.error("Send Error:", error);
-        msgEl.className = 'error';
-        msgEl.innerText = '❌ ส่งไม่สำเร็จ! ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
-      } finally {
-        btnSend.disabled = false;
-      }
+      set(ref(db, 'users/' + name), { name: name, score: score });
+      statusDiv.innerHTML = "<b style='color:#34d399;'>✅ ส่งคะแนนเรียบร้อยแล้ว!</b>";
     });
   </script>
 </body>
